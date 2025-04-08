@@ -1,7 +1,10 @@
 #!/bin/bash
 set -eu
 
-RETH_DATA_DIR=/data
+IPC_PATH="/data/reth.ipc"
+RETH_DATA_DIR="/data/reth"
+RETH_DISCOVERY_SECRET="$RETH_DATA_DIR/discovery-secret"
+
 RPC_PORT="${RPC_PORT:-8545}"
 WS_PORT="${WS_PORT:-8546}"
 AUTHRPC_PORT="${AUTHRPC_PORT:-8551}"
@@ -13,11 +16,16 @@ if [[ -z "$RETH_CHAIN" ]]; then
 fi
 
 mkdir -p $RETH_DATA_DIR
+
+# remove the snapshot-restored discovery secret so that each node has its own identity
+rm -f $RETH_DISCOVERY_SECRET
+
 echo "$OP_NODE_L2_ENGINE_AUTH_RAW" > "$OP_NODE_L2_ENGINE_AUTH"
 
 exec ./op-reth node \
   -vvv \
   --datadir="$RETH_DATA_DIR" \
+  --ipcpath="$IPC_PATH" \
   --log.stdout.format log-fmt \
   --ws \
   --ws.origins="*" \
@@ -34,5 +42,12 @@ exec ./op-reth node \
   --authrpc.jwtsecret="$OP_NODE_L2_ENGINE_AUTH" \
   --metrics=0.0.0.0:"$METRICS_PORT" \
   --chain "$RETH_CHAIN" \
+  --max-outbound-peers=100 \
   --rollup.sequencer-http=$RETH_SEQUENCER_HTTP \
   --rollup.disable-tx-pool-gossip
+
+
+#HOST_IP="<internally set host IP> "
+#
+#  -$(printf 'v%.0s' $(eval echo {1..${OP_RETH_VERBOSITY:-3}})) \
+#  --nat=extip:$HOST_IP \
